@@ -1,0 +1,18 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "Tour de Lost",
+      "request": "launch",
+      "mainClass": "tourdelost.Main",
+      "cwd": "${workspaceFolder}",
+      "classPaths": [
+        "${workspaceFolder}/bin",
+        "${workspaceFolder}/resources"
+      ],
+      "preLaunchTask": "Tour de Lost: Build",
+      "console": "integratedTerminal"
+    }
+  ]
+}
