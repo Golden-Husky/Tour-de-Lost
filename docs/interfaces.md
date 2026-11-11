@@ -1,6 +1,6 @@
 # ข้อตกลงที่ต้องกำหนดก่อนแยกเขียนระบบ
 
-เอกสารนี้เป็นรายการตัดสินใจร่วมกัน ยังไม่ได้สร้าง API หรือ implementation ของระบบเกม
+เอกสารนี้รวบรวมข้อตกลงเชื่อมระบบและ API ที่พร้อมให้ทีมใช้
 
 ## Pai: world
 
@@ -8,7 +8,37 @@
 - Edge: รหัส จุดต้น/ปลาย ทิศทาง ต้นทุน ประเภทเส้น และข้อมูลเฉพาะที่จำเป็น
 - Graph: การอ่านโหนด เส้น เพื่อนบ้าน และการตรวจเส้นที่เดินได้
 - Player/MoveRecord: ตำแหน่งและประวัติการเดินจริง
-- ระบุว่าจะยืนยันการเดินสำเร็จและรีเซ็ตผ่านเมธอดใด
+
+| คลาส | ข้อมูลเข้าและผลลัพธ์ |
+| --- | --- |
+| `Node` | `id()`, `x()`, `y()` และ `activityIds()` พิกัดในกราฟตัวอย่างนับตามช่อง Grid และกิจกรรมอ้างอิงด้วยรหัส เช่น `refuel` |
+| `Edge` | `id()`, `fromNodeId()`, `toNodeId()`, `direction()`, `type()`, `cost()`, `capacity()` และ `allowsTraversal(from, to)` ต้นทุนเป็นจำนวนเต็มไม่ติดลบ และ `capacity()` เป็น `OptionalInt` |
+| `Graph` | `findNode(id)` และ `findEdge(id)` คืน `Optional` ส่วน `nodes()`, `edges()` และ `outgoingEdges(nodeId)` ใช้อ่านกราฟทุกประเภทเส้น |
+| `Graph` | `roadEdgesBetween(from, to)` คืนถนนตรงที่เดินได้ตามทิศทางทั้งหมด และ `canMove(from, to)` คืน `true` เมื่อมีถนนดังกล่าว |
+| `Player` | `new Player(graph, startNodeId)`, `startNodeId()`, `currentNodeId()`, `history()`, `confirmMove(from, to, edgeId)` และ `reset()` ประวัติเป็นสำเนาอ่านอย่างเดียว |
+| `MoveRecord` | `fromNodeId()`, `toNodeId()`, `edgeId()` และ `cost()` ของการเดินที่สำเร็จหนึ่งครั้ง |
+
+กราฟอ่านอย่างเดียวจึงแชร์ให้ Book, Dream และ Korn ได้ ใช้ `outgoingEdges(nodeId)` เมื่อต้องอ่านเส้นทุกชนิดและใช้ `roadEdgesBetween(from, to)` เมื่อต้องเลือกถนนสำหรับผู้เล่น `confirmMove` คืน `Optional.empty()` ถ้าต้นทางไม่ตรงกับตำแหน่งปัจจุบันหรือถนนที่เลือกใช้เดินไม่ได้
+
+```java
+Graph graph = WorldDemo.createGraph();
+Player player = new Player(graph, "A");
+Edge road = graph.roadEdgesBetween("A", "B").getFirst();
+// GameSession checks resources before confirming the chosen road.
+MoveRecord move = player.confirmMove("A", "B", road.id()).orElseThrow();
+// MoveRecord[fromNodeId=A, toNodeId=B, edgeId=road-ab, cost=3]
+player.reset();
+```
+
+`WorldDemo.createGraph()` เป็นกราฟตัวอย่างสำหรับเชื่อมและตรวจระบบร่วมกัน รัน Console จากโฟลเดอร์โปรเจกต์ได้ด้วย
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\build.ps1
+. .\scripts\java-tools.ps1
+& (Get-TourJavaTools).Java -cp bin tourdelost.world.WorldDemo
+```
+
+`GameSession` จะตรวจทรัพยากรและติดตามคำสั่งเดินที่รอผล รวมถึงตัดผลจากแอนิเมชันรอบเก่าหลังรีเซ็ต ส่วน `Player` รับผิดชอบตำแหน่งและประวัติเมื่อได้รับคำสั่งยืนยัน หน่วยพิกัดของด่านจริงและรายละเอียดกิจกรรมรอข้อตกลงกับ Dream และ Book
 
 ## Book: game
 
