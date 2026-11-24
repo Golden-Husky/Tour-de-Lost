@@ -61,6 +61,42 @@ public final class WorldDemo {
         player.reset();
         check(player.currentNodeId().equals("A") && player.history().isEmpty(),
             "Reset returns the player to the start with no move history.");
+
+        checkTwoWayMovement(graph);
+        checkParallelRoadSelection();
+    }
+
+    private static void checkTwoWayMovement(Graph graph) {
+        Player player = new Player(graph, "B");
+        MoveRecord outbound = player.confirmMove("B", "C", "road-bc").orElseThrow();
+        MoveRecord inbound = player.confirmMove("C", "B", "road-bc").orElseThrow();
+
+        check(outbound.equals(new MoveRecord("B", "C", "road-bc", 2))
+                && inbound.equals(new MoveRecord("C", "B", "road-bc", 2))
+                && player.currentNodeId().equals("B")
+                && player.history().equals(List.of(outbound, inbound)),
+            "B -> C -> B records the direction of each move and costs 2 each way.");
+    }
+
+    private static void checkParallelRoadSelection() {
+        Edge firstRoad = new Edge("road-xy", "X", "Y", Edge.Direction.DIRECTED,
+            Edge.Type.ROAD, 2, OptionalInt.empty());
+        Edge secondRoad = new Edge("road-xy-alt", "X", "Y", Edge.Direction.DIRECTED,
+            Edge.Type.ROAD, 5, OptionalInt.empty());
+        Graph graph = new Graph(
+            List.of(new Node("X", 0, 0, List.of()), new Node("Y", 1, 0, List.of())),
+            List.of(firstRoad, secondRoad)
+        );
+        List<Edge> roads = graph.roadEdgesBetween("X", "Y");
+        check(roads.size() == 2 && roads.containsAll(List.of(firstRoad, secondRoad)),
+            "The graph exposes both roads from X to Y.");
+
+        Player player = new Player(graph, "X");
+        MoveRecord selected = player.confirmMove("X", "Y", "road-xy-alt").orElseThrow();
+        check(selected.equals(new MoveRecord("X", "Y", "road-xy-alt", 5))
+                && player.currentNodeId().equals("Y")
+                && player.history().equals(List.of(selected)),
+            "Selecting road-xy-alt records that road once with cost 5.");
     }
 
     private static void check(boolean passed, String description) {
